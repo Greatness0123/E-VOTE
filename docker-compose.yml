@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: sug-vote-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: sug_vote_dev_password
+      POSTGRES_DB: sug_vote
+    ports:
+      - "5432:5432"
+    volumes:
+      - sug_vote_postgres_data:/var/lib/postgresql/data
+
+volumes:
+  sug_vote_postgres_data:

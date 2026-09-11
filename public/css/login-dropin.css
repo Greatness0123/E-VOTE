@@ -1,0 +1,110 @@
+.login-dropin-panel {
+  position: relative;
+  overflow: hidden;
+}
+
+.login-brand > span {
+  font-size: 22px;
+  letter-spacing: .16em;
+}
+
+.login-dropin-stage {
+  height: 58px;
+  margin: -22px 0 14px;
+  position: relative;
+  display: grid;
+  justify-items: center;
+}
+
+.login-dropin-slot {
+  width: 92px;
+  height: 14px;
+  border: 2px solid var(--green-700);
+  border-top: 0;
+  border-radius: 0 0 10px 10px;
+  position: absolute;
+  bottom: 4px;
+  background: var(--off-white);
+  box-shadow: inset 0 -3px 0 rgba(11, 61, 46, 0.08);
+}
+
+.login-dropin-icon {
+  width: 30px;
+  height: 30px;
+  color: var(--green-900);
+  position: absolute;
+  top: -34px;
+  z-index: 1;
+  transform-origin: 50% 100%;
+}
+
+.login-dropin-fields {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.login-dropin-replay {
+  display: block;
+  margin: 18px auto 0;
+  border: 0;
+  padding: 4px 8px;
+  color: var(--green-700);
+  background: transparent;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.login-dropin-replay:hover,
+.login-dropin-replay:focus-visible {
+  color: var(--green-900);
+  text-decoration: underline;
+}
+
+.login-dropin-run .login-dropin-icon {
+  animation: login-dropin-fall 720ms cubic-bezier(.22, .9, .34, 1.15) forwards,
+    login-dropin-insert 260ms ease 880ms forwards;
+}
+
+.login-dropin-run .login-dropin-slot {
+  animation: login-dropin-flash 360ms ease 760ms both;
+}
+
+.login-dropin-run .login-dropin-fields {
+  animation: login-dropin-reveal 440ms ease 1040ms forwards;
+}
+
+@keyframes login-dropin-fall {
+  0% { top: -34px; transform: translateY(-90px) rotate(-8deg); opacity: 0; }
+  15% { opacity: 1; }
+  74% { top: 10px; transform: translateY(0) rotate(3deg); }
+  88% { top: 4px; transform: translateY(0) rotate(-2deg); }
+  100% { top: 7px; transform: translateY(0) rotate(0); opacity: 1; }
+}
+
+@keyframes login-dropin-insert {
+  from { top: 7px; opacity: 1; transform: scale(1); }
+  to { top: 21px; opacity: 0; transform: scale(.86); }
+}
+
+@keyframes login-dropin-flash {
+  0%, 100% { background: var(--off-white); box-shadow: inset 0 -3px 0 rgba(11, 61, 46, 0.08); }
+  45% { background: var(--gold-light); box-shadow: 0 0 0 5px rgba(230, 198, 87, 0.22); }
+}
+
+@keyframes login-dropin-reveal {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .login-dropin-icon,
+  .login-dropin-slot,
+  .login-dropin-fields {
+    animation: none !important;
+  }
+
+  .login-dropin-icon { top: 21px; opacity: 0; }
+  .login-dropin-fields { opacity: 1; transform: none; }
+}

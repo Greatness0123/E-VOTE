@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SUG VOTE — Your Vote. Your Voice. Your Future.</title>
+<link rel="stylesheet" href="/css/styles.css" />
+<link rel="stylesheet" href="/css/login-dropin.css" />
+</head>
+<body class="login-page">
+<main class="login-shell">
+  <section class="login-intro" aria-label="SUG VOTE introduction">
+    <div class="login-brand"><span>SUG VOTE</span></div>
+    <div class="intro-copy">
+      <p class="eyebrow">STUDENTS' UNION ELECTION</p>
+      <h1>Your voice belongs in the room.</h1>
+      <p>Cast your vote securely and help shape the leaders who represent your campus.</p>
+    </div>
+    <div class="intro-footer"><span class="status-dot"></span> Election portal online <span class="intro-divider"></span> Private by design</div>
+  </section>
+
+  <section class="login-panel login-dropin-panel login-dropin-run" aria-labelledby="login-heading">
+    <div class="login-dropin-stage" aria-hidden="true">
+      <div class="login-dropin-slot"></div>
+      <svg class="login-dropin-icon" viewBox="0 0 48 48" role="img" focusable="false">
+        <rect x="10" y="7" width="28" height="34" rx="3" fill="currentColor" />
+        <path d="M16 16h16M16 23h16M16 30h10" stroke="var(--gold-light)" stroke-width="3" stroke-linecap="round" />
+      </svg>
+    </div>
+    <div class="login-panel-header">
+      <span class="section-kicker">SECURE ACCESS</span>
+      <span class="lock-mark" aria-hidden="true">&#9670;</span>
+    </div>
+    <h2 id="login-heading">Welcome back</h2>
+    <p class="muted">Sign in to continue to the election portal.</p>
+
+    <form id="login-form">
+      <div class="login-dropin-fields">
+      <label for="matric">Email or matriculation number</label>
+      <input type="text" id="matric" name="matric" placeholder="e.g. CSC/20/0001 or name@example.edu" autocomplete="username" required />
+
+      <label for="password">Password</label>
+      <div class="password-field">
+        <input type="password" id="password" name="password" autocomplete="current-password" required />
+        <button type="button" class="password-toggle" id="password-toggle" aria-label="Show password">Show</button>
+      </div>
+
+      <div id="login-error" class="error-text" role="alert"></div>
+      <button type="submit" class="btn btn-primary btn-block">Continue <span aria-hidden="true">&#8594;</span></button>
+      </div>
+    </form>
+    <div class="login-help"><span>Protected 12-hour session</span><a href="/pages/forgot-password.html">Forgot password?</a></div>
+    <button type="button" class="login-dropin-replay" id="login-dropin-replay">Replay entrance</button>
+  </section>
+</main>
+
+<script src="/js/api.js"></script>
+<script src="/js/login.js"></script>
+</body>
+</html>

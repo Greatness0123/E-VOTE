@@ -1,0 +1,399 @@
+// SUG VOTE — Prisma schema
+// PostgreSQL, designed for Vercel-compatible serverless Postgres providers (Neon / Supabase).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum Role {
+  ADMIN
+  ELECTION_OFFICER
+  STUDENT
+}
+
+enum AccountStatus {
+  ACTIVE
+  SUSPENDED
+  INACTIVE
+}
+
+enum ElectionStatus {
+  DRAFT
+  SCHEDULED
+  ACTIVE
+  PAUSED
+  CLOSED
+  CANCELLED
+  RESULTS_PUBLISHED
+}
+
+enum CandidateStatus {
+  ACTIVE
+  DISQUALIFIED
+  WITHDRAWN
+}
+
+enum VotingSessionStatus {
+  ACTIVE
+  COMPLETED
+  ABANDONED
+  EXPIRED
+}
+
+enum VerificationMethod {
+  OTP
+  WEBAUTHN
+  CAMERA_LIVENESS
+}
+
+enum VerificationResult {
+  PENDING
+  VERIFIED
+  FAILED
+}
+
+enum NotificationType {
+  ELECTION_STARTED
+  ELECTION_CLOSING_SOON
+  ELECTION_CLOSED
+  RESULTS_PUBLISHED
+  ACCOUNT_STATUS_CHANGED
+  SECURITY_ALERT
+}
+
+// ---------------------------------------------------------------------------
+// Identity
+// ---------------------------------------------------------------------------
+
+model Student {
+  id                String        @id @default(cuid())
+  fullName          String
+  matricNumber      String        @unique
+  email             String        @unique
+  phoneNumber       String?
+  department        String?
+  level             String?
+  profilePhotoUrl   String?
+  faceEmbeddingCiphertext Bytes?
+  faceEmbeddingIv        Bytes?
+  faceEmbeddingTag       Bytes?
+  faceEnrollmentConsentAt DateTime?
+  faceEnrollmentUpdatedAt DateTime?
+  passwordHash      String
+  role              Role          @default(STUDENT)
+  accountStatus     AccountStatus @default(ACTIVE)
+  isEligibleDefault Boolean       @default(true)
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  passwordResets         PasswordReset[]
+  otpCodes               OtpCode[]
+  webAuthnCredentials    WebAuthnCredential[]
+  webAuthnChallenges     WebAuthnChallenge[]
+  votingSessions         VotingSession[]
+  participations         VoterParticipation[]
+  eligibilities          ElectionEligibility[]
+  candidacies            Candidate[]
+  auditLogs              AuditLog[]
+  notifications          Notification[]
+  disqualifiedCandidates Candidate[]           @relation("DisqualifiedBy")
+
+  @@index([accountStatus])
+  @@index([role])
+}
+
+model PasswordReset {
+  id        String    @id @default(cuid())
+  studentId String
+  student   Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([studentId])
+}
+
+// ---------------------------------------------------------------------------
+// Multi-factor verification
+// ---------------------------------------------------------------------------
+
+model OtpCode {
+  id          String    @id @default(cuid())
+  studentId   String
+  student     Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  codeHash    String
+  purpose     String // "LOGIN_VERIFY" | "VOTE_VERIFY" | "PASSWORD_RESET"
+  attempts    Int       @default(0)
+  maxAttempts Int       @default(3)
+  expiresAt   DateTime
+  consumedAt  DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([studentId, purpose])
+}
+
+model WebAuthnCredential {
+  id           String    @id @default(cuid())
+  studentId    String
+  student      Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  credentialId String    @unique
+  publicKey    Bytes
+  counter      BigInt    @default(0)
+  deviceType   String?
+  backedUp     Boolean   @default(false)
+  transports   String?
+  createdAt    DateTime  @default(now())
+  lastUsedAt   DateTime?
+
+  @@index([studentId])
+}
+
+// Persistent WebAuthn challenge store — replaces an in-process Map so
+// challenges survive across serverless cold starts / multiple instances.
+model WebAuthnChallenge {
+  id        String    @id @default(cuid())
+  studentId String
+  student   Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  purpose   String // "REGISTRATION" | "AUTHENTICATION"
+  challenge String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([studentId, purpose])
+}
+
+model VotingSession {
+  id                   String              @id @default(cuid())
+  studentId            String
+  student              Student             @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  electionId           String
+  election             Election            @relation(fields: [electionId], references: [id], onDelete: Cascade)
+  status               VotingSessionStatus @default(ACTIVE)
+  passwordVerifiedAt   DateTime?
+  otpVerifiedAt        DateTime?
+  webauthnVerifiedAt   DateTime?
+  livenessVerifiedAt   DateTime?
+  livenessChallengeId  String?
+  livenessAction       String?
+  livenessNonceHash    String?
+  livenessExpiresAt    DateTime?
+  livenessConsumedAt   DateTime?
+  eligibilityCheckedAt DateTime?
+  sessionToken         String              @unique
+  expiresAt            DateTime
+  createdAt            DateTime            @default(now())
+  completedAt          DateTime?
+
+  verificationEvents VerificationEvent[]
+
+  @@index([studentId, electionId])
+  @@index([status])
+}
+
+model VerificationEvent {
+  id              String             @id @default(cuid())
+  votingSessionId String
+  votingSession   VotingSession      @relation(fields: [votingSessionId], references: [id], onDelete: Cascade)
+  method          VerificationMethod
+  result          VerificationResult
+  metadata        String? // small non-sensitive metadata only, e.g. "blink,turn_left"
+  createdAt       DateTime           @default(now())
+
+  @@index([votingSessionId])
+}
+
+// ---------------------------------------------------------------------------
+// Elections
+// ---------------------------------------------------------------------------
+
+model Election {
+  id              String         @id @default(cuid())
+  title           String
+  description     String?
+  academicSession String?
+  startDate       DateTime
+  endDate         DateTime
+  status          ElectionStatus @default(DRAFT)
+  createdBy       String?
+  publishedAt     DateTime?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  positions      Position[]
+  candidates     Candidate[]
+  votingSessions VotingSession[]
+  participations VoterParticipation[]
+  eligibilities  ElectionEligibility[]
+  ballots        Ballot[]
+
+  @@index([status])
+}
+
+model ElectionEligibility {
+  id         String   @id @default(cuid())
+  electionId String
+  election   Election @relation(fields: [electionId], references: [id], onDelete: Cascade)
+  studentId  String
+  student    Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@unique([electionId, studentId])
+}
+
+model Position {
+  id           String   @id @default(cuid())
+  electionId   String
+  election     Election @relation(fields: [electionId], references: [id], onDelete: Cascade)
+  title        String
+  description  String?
+  displayOrder Int      @default(0)
+  required     Boolean  @default(true)
+  status       String   @default("ACTIVE")
+
+  candidates       Candidate[]
+  ballotSelections BallotSelection[]
+
+  @@index([electionId])
+}
+
+model Candidate {
+  id                 String          @id @default(cuid())
+  electionId         String
+  election           Election        @relation(fields: [electionId], references: [id], onDelete: Cascade)
+  positionId         String
+  position           Position        @relation(fields: [positionId], references: [id], onDelete: Cascade)
+  studentId          String?
+  student            Student?        @relation(fields: [studentId], references: [id])
+  fullName           String
+  profilePhotoUrl    String?
+  mediaAssetId       String?         @unique
+  mediaAsset         MediaAsset?     @relation(fields: [mediaAssetId], references: [id], onDelete: SetNull)
+  slogan             String?
+  manifesto          String?
+  status             CandidateStatus @default(ACTIVE)
+  displayOrder       Int             @default(0)
+  disqualifiedReason String?
+  disqualifiedAt     DateTime?
+  disqualifiedById   String?
+  disqualifiedBy     Student?        @relation("DisqualifiedBy", fields: [disqualifiedById], references: [id])
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+
+  ballotSelections BallotSelection[]
+
+  @@index([electionId, positionId])
+}
+
+model MediaAsset {
+  id          String     @id @default(cuid())
+  contentType String
+  bytes       Bytes
+  byteLength  Int
+  sha256      String
+  createdAt   DateTime   @default(now())
+  candidate   Candidate?
+
+  @@index([sha256])
+}
+
+// ---------------------------------------------------------------------------
+// Voting — identity/participation is deliberately separated from ballot content
+// ---------------------------------------------------------------------------
+
+// Records that a student participated — never linked to what they selected.
+model VoterParticipation {
+  id          String   @id @default(cuid())
+  studentId   String
+  student     Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  electionId  String
+  election    Election @relation(fields: [electionId], references: [id], onDelete: Cascade)
+  completedAt DateTime @default(now())
+
+  // Enforces one participation per student per election at the database level.
+  @@unique([studentId, electionId])
+  @@index([electionId])
+}
+
+// The ballot itself carries no reference to the voter.
+model Ballot {
+  id                String   @id @default(cuid())
+  electionId        String
+  election          Election @relation(fields: [electionId], references: [id], onDelete: Cascade)
+  anonymousBallotId String   @unique @default(cuid())
+  createdAt         DateTime @default(now())
+
+  selections BallotSelection[]
+
+  @@index([electionId])
+}
+
+model BallotSelection {
+  id          String    @id @default(cuid())
+  ballotId    String
+  ballot      Ballot    @relation(fields: [ballotId], references: [id], onDelete: Cascade)
+  positionId  String
+  position    Position  @relation(fields: [positionId], references: [id], onDelete: Cascade)
+  candidateId String
+  candidate   Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+
+  // A ballot may only select one candidate per position.
+  @@unique([ballotId, positionId])
+  @@index([positionId, candidateId])
+}
+
+// ---------------------------------------------------------------------------
+// Audit
+// ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// Notifications, settings, system health
+// ---------------------------------------------------------------------------
+
+model Notification {
+  id         String           @id @default(cuid())
+  studentId  String
+  student    Student          @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  type       NotificationType
+  title      String
+  body       String?
+  electionId String?
+  readAt     DateTime?
+  createdAt  DateTime         @default(now())
+
+  @@index([studentId, readAt])
+}
+
+// Simple key/value application settings, admin-editable.
+model Setting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  actorId   String?
+  actor     Student? @relation(fields: [actorId], references: [id])
+  action    String
+  entity    String?
+  entityId  String?
+  metadata  String?
+  ipAddress String?
+  createdAt DateTime @default(now())
+
+  @@index([actorId])
+  @@index([action])
+  @@index([createdAt])
+}

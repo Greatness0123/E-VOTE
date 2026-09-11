@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Vote — SUG VOTE</title>
+<link rel="stylesheet" href="/css/styles.css" />
+</head>
+<body>
+<div class="app-shell">
+  <div class="topbar" style="justify-content:space-between;">
+    <div style="display:flex;align-items:center;gap:12px;">
+      <div class="brand-mark">SV</div>
+      <div>
+        <div class="brand-name">SUG VOTE</div>
+        <div class="brand-tagline" id="student-name">Loading…</div>
+      </div>
+    </div>
+    <div style="position:relative;">
+      <button id="notif-bell" style="background:none;border:none;color:#fff;font-size:20px;cursor:pointer;position:relative;">
+        🔔<span id="notif-badge" style="display:none;position:absolute;top:-4px;right:-6px;background:var(--gold);color:var(--green-900);border-radius:999px;font-size:10px;padding:1px 5px;font-weight:700;"></span>
+      </button>
+      <div id="notif-dropdown" style="display:none;position:absolute;right:0;top:32px;width:280px;background:#fff;border-radius:var(--radius-md);box-shadow:var(--shadow-md);max-height:320px;overflow-y:auto;z-index:10;"></div>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="progress-steps">
+      <div class="step" data-step="verify"></div>
+      <div class="step" data-step="identity"></div>
+      <div class="step" data-step="vote"></div>
+      <div class="step" data-step="review"></div>
+      <div class="step" data-step="submit"></div>
+    </div>
+
+    <!-- STEP: OTP -->
+    <div class="card" id="step-otp">
+      <h2>Verify Your Email</h2>
+      <p class="muted">Enter the 6-digit code sent to your registered email.</p>
+      <div class="otp-boxes">
+        <input maxlength="1" inputmode="numeric" />
+        <input maxlength="1" inputmode="numeric" />
+        <input maxlength="1" inputmode="numeric" />
+        <input maxlength="1" inputmode="numeric" />
+        <input maxlength="1" inputmode="numeric" />
+        <input maxlength="1" inputmode="numeric" />
+      </div>
+      <p class="muted" style="text-align:center;">Code expires in <span id="otp-timer">30</span>s</p>
+      <div id="otp-error" class="error-text" style="text-align:center;"></div>
+      <button class="btn btn-outline btn-block" id="resend-otp" disabled>Resend code</button>
+    </div>
+
+    <!-- STEP: Identity (camera liveness) -->
+    <div class="card" id="step-identity" style="display:none;">
+      <h2>Verify Your Identity</h2>
+      <p class="muted">Keep your face in the frame. Nothing is uploaded — detection runs on your device.</p>
+      <video id="camera-view" autoplay playsinline muted></video>
+      <p class="muted" id="liveness-instruction" style="text-align:center;margin-top:12px;">Enable your camera to begin</p>
+      <div id="identity-error" class="error-text" style="text-align:center;"></div>
+      <button class="btn btn-primary btn-block" id="start-camera">Enable Camera</button>
+      <button class="btn btn-outline btn-block" id="retry-liveness" style="display:none;">Try Again</button>
+    </div>
+
+    <!-- STEP: Ballot -->
+    <div class="card" id="step-ballot" style="display:none;">
+      <h2 id="election-title">Ballot</h2>
+      <div id="positions-container"></div>
+      <div id="ballot-error" class="error-text"></div>
+      <button class="btn btn-primary btn-block" id="to-review">Review My Vote</button>
+    </div>
+
+    <!-- STEP: Review -->
+    <div class="card" id="step-review" style="display:none;">
+      <h2>Review Your Vote</h2>
+      <div id="review-container"></div>
+      <p class="muted">Your vote is anonymous and cannot be changed after submission.</p>
+      <button class="btn btn-outline" id="go-back">Go Back</button>
+      <button class="btn btn-gold" id="submit-vote">Submit Vote</button>
+    </div>
+
+    <!-- STEP: Success -->
+    <div class="card" id="step-success" style="display:none;text-align:center;">
+      <div style="font-size:48px;color:#0f4d3a;">✓</div>
+      <h1>Vote Submitted!</h1>
+      <p>Thank you for making your voice count.</p>
+      <div class="success-banner" id="receipt"></div>
+      <a class="btn btn-primary btn-block" href="/">Back to Home</a>
+    </div>
+  </div>
+</div>
+
+<script src="/js/api.js"></script>
+<script src="/js/vendor/face-api.min.js"></script>
+<script src="/js/liveness.js"></script>
+<script src="/js/vote.js"></script>
+</body>
+</html>

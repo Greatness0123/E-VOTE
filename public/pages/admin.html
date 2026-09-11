@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Admin Dashboard — SUG VOTE</title>
+<link rel="stylesheet" href="/css/styles.css" />
+<link rel="stylesheet" href="/css/admin.css" />
+</head>
+<body>
+<div class="admin-layout">
+  <aside class="sidebar" id="admin-sidebar">
+    <div class="admin-brand"><span class="admin-brand-mark">SV</span><span><strong>SUG VOTE</strong><small>CONTROL CENTER</small></span></div>
+    <div class="sidebar-label">Workspace</div>
+    <nav aria-label="Admin navigation">
+      <a href="#" data-view="dashboard" class="active"><span class="nav-icon">⌂</span>Dashboard</a>
+      <a href="#" data-view="elections"><span class="nav-icon">◈</span>Elections</a>
+      <a href="#" data-view="voters"><span class="nav-icon">♙</span>Voters</a>
+      <a href="#" data-view="results"><span class="nav-icon">▥</span>Results &amp; Reports</a>
+      <a href="#" data-view="audit"><span class="nav-icon">≡</span>Audit Logs</a>
+      <a href="#" data-view="settings"><span class="nav-icon">⚙</span>Settings</a>
+    </nav>
+    <a href="#" id="logout-link" class="logout-link"><span class="nav-icon">↪</span>Log Out</a>
+  </aside>
+  <div class="admin-main">
+    <header class="admin-header">
+      <button type="button" class="sidebar-toggle" id="sidebar-toggle" aria-label="Open navigation">☰</button>
+      <div><span class="admin-header-kicker">ADMINISTRATION</span><h1 id="admin-view-title">Dashboard</h1></div>
+      <div class="admin-header-status"><span class="status-dot"></span> System online</div>
+    </header>
+    <div class="admin-content">
+    <div id="view-dashboard">
+      <div class="view-intro"><div><span class="view-kicker">OVERVIEW</span><h2>Welcome back, Election Officer</h2><p class="muted">A clear view of turnout, activity, and election health.</p></div><label class="compact-control" for="election-select"><span>Active election</span><select id="election-select"></select></label></div>
+      <div class="grid-metrics" id="metrics"></div>
+      <div class="card" id="status-card"></div>
+      <div class="card">
+        <h2>Voter Turnout Over Time</h2>
+        <canvas id="turnout-chart" width="600" height="220" style="width:100%;height:220px;"></canvas>
+      </div>
+      <div class="card">
+        <h2>Ballots Completed Per Position</h2>
+        <canvas id="position-chart" width="600" height="220" style="width:100%;height:220px;"></canvas>
+      </div>
+      <div class="card" id="security-alerts-card">
+        <h2>Security Alerts</h2>
+        <div id="security-alerts">Loading…</div>
+      </div>
+    </div>
+
+    <div id="view-elections" style="display:none;">
+      <div class="view-intro"><div><span class="view-kicker">WORKSPACE</span><h2>Elections</h2><p class="muted">Create elections and guide them through each voting phase.</p></div></div>
+      <div class="card">
+        <h2>Create Election</h2>
+        <form id="create-election-form">
+          <label>Title</label><input type="text" id="e-title" required />
+          <label>Academic Session</label><input type="text" id="e-session" placeholder="2025/2026" />
+          <label>Start Date</label><input type="text" id="e-start" placeholder="2026-09-10T08:00" required />
+          <label>End Date</label><input type="text" id="e-end" placeholder="2026-09-11T18:00" required />
+          <button class="btn btn-primary btn-block" type="submit">Create</button>
+        </form>
+      </div>
+      <div class="card">
+        <h2>All Elections</h2>
+        <div id="elections-list"></div>
+      </div>
+    </div>
+
+    <div id="view-voters" style="display:none;">
+      <div class="view-intro"><div><span class="view-kicker">PEOPLE</span><h2>Voter Management</h2><p class="muted">Import, search, and securely prepare voter identities.</p></div></div>
+      <div class="card">
+        <h2>Bulk Import (CSV)</h2>
+        <p class="muted">Columns: fullName, matricNumber, email, phoneNumber, department, level</p>
+        <input type="file" id="csv-file" accept=".csv" />
+        <button class="btn btn-primary" id="import-btn" style="margin-top:12px;">Import</button>
+        <div id="import-result" class="muted" style="margin-top:10px;"></div>
+      </div>
+      <div class="card">
+        <h2>Search Voters</h2>
+        <input type="text" id="voter-search" placeholder="Search by name, matric, or email" />
+        <div id="voters-table" style="margin-top:14px;"></div>
+      </div>
+      <div class="card">
+        <h2>Face Enrollment</h2>
+        <p class="muted">With consent, select a clear image containing one face. The image is processed in this browser; only an encrypted face embedding is stored.</p>
+        <form id="face-enrollment-form">
+          <label for="face-voter-matric">Voter matriculation number</label>
+          <input type="text" id="face-voter-matric" placeholder="e.g. CSC/20/0001" required />
+          <label for="face-enrollment-image">Enrollment image</label>
+          <input type="file" id="face-enrollment-image" accept="image/*" required />
+          <label><input type="checkbox" id="face-enrollment-consent" required /> Voter consent has been recorded</label>
+          <button class="btn btn-primary btn-block" type="submit">Enroll Face</button>
+          <button class="btn btn-outline btn-block" type="button" id="delete-face-enrollment">Remove Face Enrollment</button>
+        </form>
+        <div id="face-enrollment-msg" class="muted" style="margin-top:10px;"></div>
+      </div>
+    </div>
+
+    <div id="view-results" style="display:none;">
+      <div class="view-intro"><div><span class="view-kicker">INSIGHTS</span><h2>Results &amp; Reports</h2><p class="muted">Review election outcomes and export official reports.</p></div><label class="compact-control" for="results-election-select"><span>Election</span><select id="results-election-select"></select></label></div>
+      <div class="card" id="results-container"></div>
+      <a class="btn btn-gold" id="download-report" href="#" target="_blank">Download PowerPoint Report</a>
+    </div>
+
+    <div id="view-audit" style="display:none;">
+      <div class="view-intro"><div><span class="view-kicker">SECURITY</span><h2>Audit Logs</h2><p class="muted">Trace important actions across the election system.</p></div></div>
+      <div class="card">
+        <input type="text" id="audit-filter" placeholder="Filter by action (e.g. LOGIN, VOTE_SUBMITTED)" />
+        <div id="audit-table" style="margin-top:14px;"></div>
+        <div style="margin-top:12px;display:flex;gap:8px;">
+          <button class="btn btn-outline" id="audit-prev">Previous</button>
+          <button class="btn btn-outline" id="audit-next">Next</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="view-settings" style="display:none;">
+      <div class="view-intro"><div><span class="view-kicker">CONFIGURATION</span><h2>Settings</h2><p class="muted">Keep portal details and staff access up to date.</p></div></div>
+      <div class="card">
+        <p class="muted">Only Admins can change settings; Election Officers can view them.</p>
+        <label>Site Name</label>
+        <input type="text" id="setting-SITE_NAME" />
+        <label>Support Email</label>
+        <input type="text" id="setting-SUPPORT_EMAIL" />
+        <label>Electoral Office Contact</label>
+        <input type="text" id="setting-ELECTORAL_OFFICE_CONTACT" />
+        <button class="btn btn-primary" id="save-settings" style="margin-top:16px;">Save Settings</button>
+        <div id="settings-msg" class="muted" style="margin-top:10px;"></div>
+      </div>
+      <div class="card" id="account-management-card" style="display:none;">
+        <h2>Create Staff Account</h2>
+        <p class="muted">Only full Administrators can create Administrator or Election Officer accounts.</p>
+        <form id="create-account-form">
+          <label for="account-full-name">Full Name</label>
+          <input type="text" id="account-full-name" required />
+          <label for="account-email">Email</label>
+          <input type="email" id="account-email" required />
+          <label for="account-role">Role</label>
+          <select id="account-role">
+            <option value="ELECTION_OFFICER">Election Officer</option>
+            <option value="ADMIN">Administrator</option>
+          </select>
+          <label for="account-password">Temporary Password</label>
+          <input type="password" id="account-password" minlength="10" required />
+          <button class="btn btn-primary btn-block" type="submit">Create Account</button>
+        </form>
+        <div id="account-msg" class="muted" style="margin-top:10px;"></div>
+      </div>
+    </div>
+    </div>
+  </div>
+</div>
+
+<script src="/js/api.js"></script>
+<script src="/js/charts.js"></script>
+<script src="/js/vendor/face-api.min.js"></script>
+<script src="/js/face-enrollment.js"></script>
+<script src="/js/admin.js"></script>
+</body>
+</html>
