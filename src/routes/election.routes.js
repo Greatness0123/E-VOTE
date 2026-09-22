@@ -32,7 +32,16 @@ router.get("/", async (req, res) => {
 router.get("/:id", async (req, res) => {
   const election = await prisma.election.findUnique({
     where: { id: req.params.id },
-    include: { positions: { orderBy: { displayOrder: "asc" }, include: { candidates: true } } },
+    include: {
+      positions: {
+        orderBy: [{ displayOrder: "asc" }, { title: "asc" }],
+        include: {
+          candidates: {
+            orderBy: [{ displayOrder: "asc" }, { createdAt: "asc" }],
+          },
+        },
+      },
+    },
   });
   if (!election) return res.status(404).json({ error: "Election not found" });
   res.json({ election });

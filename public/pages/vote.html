@@ -26,6 +26,7 @@
 
   <div class="container">
     <div class="progress-steps">
+      <div class="step" data-step="select"></div>
       <div class="step" data-step="verify"></div>
       <div class="step" data-step="identity"></div>
       <div class="step" data-step="vote"></div>
@@ -33,8 +34,16 @@
       <div class="step" data-step="submit"></div>
     </div>
 
+    <!-- STEP: Election Selection -->
+    <div class="card" id="step-select">
+      <h2>Select Election</h2>
+      <p class="muted">Choose the active election you want to participate in.</p>
+      <div id="elections-container" style="display:grid;gap:16px;margin-top:20px;"></div>
+      <div id="select-election-error" class="error-text" style="text-align:center;margin-top:12px;"></div>
+    </div>
+
     <!-- STEP: OTP -->
-    <div class="card" id="step-otp">
+    <div class="card" id="step-otp" style="display:none;">
       <h2>Verify Your Email</h2>
       <p class="muted">Enter the 6-digit code sent to your registered email.</p>
       <div class="otp-boxes">
@@ -61,12 +70,28 @@
       <button class="btn btn-outline btn-block" id="retry-liveness" style="display:none;">Try Again</button>
     </div>
 
-    <!-- STEP: Ballot -->
+    <!-- STEP: Ballot (Position Wizard) -->
     <div class="card" id="step-ballot" style="display:none;">
-      <h2 id="election-title">Ballot</h2>
+      <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);padding-bottom:12px;margin-bottom:16px;">
+        <h2 id="election-title" style="margin:0;">Ballot</h2>
+        <span id="position-progress-badge" class="badge badge-active" style="font-size:13px;">Position 1 of 1</span>
+      </div>
+
+      <!-- Stepper / Position title bar -->
+      <div id="position-header" style="margin-bottom:18px;"></div>
+
+      <!-- Candidate cards for active position -->
       <div id="positions-container"></div>
-      <div id="ballot-error" class="error-text"></div>
-      <button class="btn btn-primary btn-block" id="to-review">Review My Vote</button>
+
+      <div id="ballot-error" class="error-text" style="margin-top:12px;"></div>
+
+      <!-- Navigation buttons with Previous / Next arrows -->
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:24px;padding-top:16px;border-top:1px solid var(--border);">
+        <button class="btn btn-outline" id="prev-position-btn" type="button">← Previous</button>
+        <button class="btn btn-outline" id="clear-selection-btn" type="button" style="font-size:13px;padding:8px 12px;color:var(--text-muted);">Unpick / Clear</button>
+        <button class="btn btn-primary" id="next-position-btn" type="button">Next →</button>
+        <button class="btn btn-gold" id="to-review" type="button" style="display:none;">Review My Vote →</button>
+      </div>
     </div>
 
     <!-- STEP: Review -->

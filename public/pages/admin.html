@@ -61,42 +61,59 @@
       </div>
       <div class="card">
         <h2>Positions &amp; Candidate Profiles</h2>
-        <div style="display:grid;gap:20px;">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(300px, 1fr));gap:24px;">
           <form id="create-position-form">
+            <h3>Add Position</h3>
             <label>Election</label>
             <select id="position-election-select"></select>
             <label>Position Title</label>
-            <input type="text" id="position-title" required />
+            <input type="text" id="position-title" placeholder="e.g. President, Vice President" required />
             <label>Description (optional)</label>
-            <textarea id="position-description" rows="3" placeholder="Brief description of the position"></textarea>
-            <label>Display Order</label>
-            <input type="number" id="position-order" min="0" value="0" />
+            <textarea id="position-description" rows="2" placeholder="Brief description of duties"></textarea>
+            <label>Display Order <small class="muted">(Controls sequence on ballot, e.g. 1 = President, 2 = VP)</small></label>
+            <input type="number" id="position-order" min="0" value="1" required />
             <button class="btn btn-primary btn-block" type="submit">Add Position</button>
+            <div id="position-msg" class="muted" style="margin-top:10px;font-size:13px;font-weight:600;"></div>
           </form>
 
           <form id="create-candidate-form" enctype="multipart/form-data">
+            <h3>Add Candidate Profile</h3>
             <label>Election</label>
             <select id="candidate-election-select"></select>
             <label>Position</label>
             <select id="candidate-position-select" required></select>
             <label>Candidate Name</label>
-            <input type="text" id="candidate-name" required />
+            <input type="text" id="candidate-name" placeholder="Full name of candidate" required />
             <label>Level (optional)</label>
             <input type="text" id="candidate-level" placeholder="e.g. 300 Level" />
             <label>Course / Department (optional)</label>
             <input type="text" id="candidate-course" placeholder="e.g. Computer Science" />
-            <label>Candidate Statement (optional)</label>
-            <textarea id="candidate-statement" rows="3" placeholder="A short campaign statement"></textarea>
-            <label>Candidate Information (optional)</label>
-            <textarea id="candidate-info" rows="5" placeholder="Include background, manifesto, or other details"></textarea>
-            <label>Display Order</label>
-            <input type="number" id="candidate-order" min="0" value="0" />
+            <label>Candidate Statement / Slogan (optional)</label>
+            <textarea id="candidate-statement" rows="2" placeholder="Short tagline or summary statement"></textarea>
+            <label>Candidate Information / Manifesto (optional)</label>
+            <textarea id="candidate-info" rows="3" placeholder="Background, achievements, manifesto"></textarea>
+            <label>Display Order <small class="muted">(Sequence within position, e.g. 1, 2, 3)</small></label>
+            <input type="number" id="candidate-order" min="0" value="1" required />
             <label>Candidate Photo (optional)</label>
             <input type="file" id="candidate-photo" accept="image/*" />
-            <button class="btn btn-primary btn-block" type="submit">Add Candidate</button>
+            <button class="btn btn-primary btn-block" type="submit" id="add-candidate-btn">Add Candidate</button>
+            <div id="candidate-msg" class="muted" style="margin-top:10px;font-size:13px;font-weight:600;"></div>
           </form>
         </div>
       </div>
+
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+          <h2>Manage Positions &amp; Candidates Explorer</h2>
+          <label class="compact-control" for="explorer-election-select" style="min-width:240px;">
+            <span>Election</span>
+            <select id="explorer-election-select"></select>
+          </label>
+        </div>
+        <p class="muted">View existing positions, examine candidate profiles, or update status (e.g. disqualify/reinstate).</p>
+        <div id="positions-explorer" style="margin-top:16px;"></div>
+      </div>
+
       <div class="card">
         <h2>All Elections</h2>
         <div id="elections-list"></div>

@@ -1,6 +1,7 @@
 let sessionId = null;
 let electionId = null;
 let positionsData = [];
+let currentPositionIndex = 0;
 const selections = {}; // positionId -> candidateId
 
 function element(tag, className, text) {
@@ -11,17 +12,20 @@ function element(tag, className, text) {
 }
 
 function showStep(name) {
-  ["otp", "identity", "ballot", "review", "success"].forEach((s) => {
-    document.getElementById(`step-${s}`).style.display = s === name ? "block" : "none";
+  ["select", "otp", "identity", "ballot", "review", "success"].forEach((s) => {
+    const el = document.getElementById(`step-${s}`);
+    if (el) el.style.display = s === name ? "block" : "none";
   });
   document.querySelectorAll(".progress-steps .step").forEach((el) => el.classList.remove("active", "done"));
-  const order = ["verify", "identity", "vote", "review", "submit"];
-  const mapped = { otp: "verify", identity: "identity", ballot: "vote", review: "review", success: "submit" }[name];
+  const order = ["select", "verify", "identity", "vote", "review", "submit"];
+  const mapped = { select: "select", otp: "verify", identity: "identity", ballot: "vote", review: "review", success: "submit" }[name];
   const idx = order.indexOf(mapped);
   order.forEach((o, i) => {
     const el = document.querySelector(`.step[data-step="${o}"]`);
-    if (i < idx) el.classList.add("done");
-    if (i === idx) el.classList.add("active");
+    if (el) {
+      if (i < idx) el.classList.add("done");
+      if (i === idx) el.classList.add("active");
+    }
   });
 }
 
@@ -35,16 +39,65 @@ async function init() {
   }
   document.getElementById("student-name").textContent = `Welcome, ${me.student.fullName}`;
   const requestedId = new URLSearchParams(window.location.search).get("electionId");
-  const { elections } = await api("/vote/elections/active-for-me");
-  const activeElectionIds = new Set((elections || []).map((election) => election.id));
-  electionId = requestedId || elections?.[0]?.id;
-  if (!electionId || !activeElectionIds.has(electionId)) {
-    document.getElementById("otp-error").textContent = "There is no active election you're eligible to vote in right now.";
-    return;
+
+  try {
+    const { elections } = await api("/vote/elections/active-for-me");
+    const electionsContainer = document.getElementById("elections-container");
+    const errorEl = document.getElementById("select-election-error");
+
+    if (!elections || elections.length === 0) {
+      if (errorEl) errorEl.textContent = "There are no active elections you are eligible to vote in right now.";
+      showStep("select");
+      return;
+    }
+
+    if (requestedId && elections.some((e) => e.id === requestedId)) {
+      await startElectionSession(requestedId);
+      return;
+    }
+
+    electionsContainer.replaceChildren(...elections.map((election) => {
+      const card = document.createElement("div");
+      card.style.cssText = "border:2px solid var(--border);border-radius:var(--radius-lg);padding:20px;background:var(--white);box-shadow:var(--shadow-sm);";
+
+      const title = element("h3", "", election.title);
+      title.style.margin = "0 0 6px 0";
+
+      const sessionInfo = element("div", "muted", `${election.academicSession ? `Session: ${election.academicSession} · ` : ""}Ends: ${new Date(election.endDate).toLocaleString()}`);
+      sessionInfo.style.cssText = "font-size:13px;margin-bottom:10px;";
+
+      const desc = element("p", "", election.description || "Student Union Government official election.");
+      desc.style.cssText = "font-size:14px;color:var(--charcoal);margin-bottom:16px;";
+
+      const btn = element("button", "btn btn-primary btn-block", "Select & Vote");
+      btn.addEventListener("click", () => startElectionSession(election.id));
+
+      card.append(title, sessionInfo, desc, btn);
+      return card;
+    }));
+
+    showStep("select");
+  } catch (err) {
+    const errorEl = document.getElementById("select-election-error");
+    if (errorEl) errorEl.textContent = err.message;
+    showStep("select");
   }
-  const session = await api(`/vote/elections/${electionId}/session`, { method: "POST" });
-  sessionId = session.sessionId;
-  await sendOtp();
+}
+
+async function startElectionSession(selectedElectionId) {
+  electionId = selectedElectionId;
+  const errorEl = document.getElementById("select-election-error");
+  if (errorEl) errorEl.textContent = "";
+
+  try {
+    const session = await api(`/vote/elections/${electionId}/session`, { method: "POST" });
+    sessionId = session.sessionId;
+    showStep("otp");
+    await sendOtp();
+  } catch (err) {
+    if (errorEl) errorEl.textContent = err.message;
+    showStep("select");
+  }
 }
 
 async function sendOtp() {
@@ -161,63 +214,173 @@ document.getElementById("retry-liveness").addEventListener("click", () => {
 
 async function loadBallot() {
   const res = await api(`/vote/sessions/${sessionId}/ballot`);
-  positionsData = res.positions;
+  positionsData = res.positions || [];
+  currentPositionIndex = 0;
+  if (positionsData.length === 0) {
+    document.getElementById("ballot-error").textContent = "No positions found for this election.";
+    showStep("ballot");
+    return;
+  }
+  renderCurrentPosition();
+  showStep("ballot");
+}
+
+function renderCurrentPosition() {
+  const errorEl = document.getElementById("ballot-error");
+  if (errorEl) errorEl.textContent = "";
+
+  const badge = document.getElementById("position-progress-badge");
+  if (badge) badge.textContent = `Position ${currentPositionIndex + 1} of ${positionsData.length}`;
+
+  const pos = positionsData[currentPositionIndex];
+  if (!pos) return;
+
+  const header = document.getElementById("position-header");
+  header.replaceChildren();
+
+  const title = element("h3", "", pos.title.toUpperCase());
+  title.style.margin = "0 0 4px 0";
+  header.appendChild(title);
+
+  const descText = pos.description || "Click a candidate card to pick or unpick your choice.";
+  const desc = element("p", "muted", descText);
+  desc.style.fontSize = "13px";
+  header.appendChild(desc);
+
   const container = document.getElementById("positions-container");
   container.replaceChildren();
-  positionsData.forEach((position) => {
-    const section = document.createElement("div");
-    section.appendChild(element("h3", "", position.title.toUpperCase()));
-    position.candidates.forEach((c) => {
-      const card = document.createElement("label");
-      card.className = "candidate-card";
+
+  if (!pos.candidates || pos.candidates.length === 0) {
+    container.appendChild(element("p", "muted", "No active candidates registered for this position."));
+  } else {
+    pos.candidates.forEach((c) => {
+      const isSelected = selections[pos.id] === c.id;
+      const card = document.createElement("div");
+      card.className = `candidate-card ${isSelected ? "selected" : ""}`;
       card.id = `card-${c.id}`;
+
       const avatar = element("div", "avatar");
       if (c.profilePhotoUrl) {
         const image = document.createElement("img");
         image.src = c.profilePhotoUrl;
         image.alt = "";
         avatar.appendChild(image);
+      } else {
+        avatar.style.display = "grid";
+        avatar.style.placeItems = "center";
+        avatar.style.fontWeight = "700";
+        avatar.style.color = "var(--green-900)";
+        avatar.textContent = (c.fullName[0] || "C").toUpperCase();
       }
+
       const details = document.createElement("div");
-      details.append(element("div", "name", c.fullName), element("div", "slogan", c.slogan || ""));
-      const input = document.createElement("input");
-      input.type = "radio";
-      input.name = `position-${position.id}`;
-      input.value = c.id;
-      card.append(avatar, details, input);
-      input.addEventListener("change", () => {
-        selections[position.id] = c.id;
-        document.querySelectorAll(`.candidate-card`).forEach((el) => {
-          if (el.querySelector(`input[name="position-${position.id}"]`)) el.classList.remove("selected");
-        });
-        card.classList.add("selected");
+      details.style.flex = "1";
+      details.style.minWidth = "0";
+
+      const nameRow = element("div", "name", c.fullName);
+      details.appendChild(nameRow);
+
+      if (c.statement || c.slogan) {
+        const slogan = element("div", "slogan", c.statement || c.slogan);
+        details.appendChild(slogan);
+      }
+
+      if (c.manifesto) {
+        const info = element("div", "muted", c.manifesto);
+        info.style.cssText = "font-size:12px;margin-top:4px;";
+        details.appendChild(info);
+      }
+
+      const checkBadge = document.createElement("div");
+      checkBadge.style.cssText = `width:26px;height:26px;border-radius:50%;border:2px solid ${isSelected ? "var(--green-700)" : "var(--border)"};background:${isSelected ? "var(--green-700)" : "transparent"};color:#fff;display:grid;place-items:center;font-weight:700;font-size:14px;flex-shrink:0;`;
+      if (isSelected) checkBadge.textContent = "✓";
+
+      card.append(avatar, details, checkBadge);
+
+      card.addEventListener("click", () => {
+        if (selections[pos.id] === c.id) {
+          // Unpick / Deselect
+          delete selections[pos.id];
+        } else {
+          // Pick
+          selections[pos.id] = c.id;
+        }
+        renderCurrentPosition();
       });
-      section.appendChild(card);
+
+      container.appendChild(card);
     });
-    container.appendChild(section);
-  });
-  showStep("ballot");
+  }
+
+  // Update navigation controls
+  const prevBtn = document.getElementById("prev-position-btn");
+  const nextBtn = document.getElementById("next-position-btn");
+  const reviewBtn = document.getElementById("to-review");
+  const clearBtn = document.getElementById("clear-selection-btn");
+
+  if (prevBtn) prevBtn.disabled = currentPositionIndex === 0;
+  if (nextBtn) nextBtn.style.display = currentPositionIndex < positionsData.length - 1 ? "inline-flex" : "none";
+  if (reviewBtn) reviewBtn.style.display = currentPositionIndex === positionsData.length - 1 ? "inline-flex" : "none";
+  if (clearBtn) clearBtn.style.visibility = selections[pos.id] ? "visible" : "hidden";
 }
+
+document.getElementById("prev-position-btn").addEventListener("click", () => {
+  if (currentPositionIndex > 0) {
+    currentPositionIndex--;
+    renderCurrentPosition();
+  }
+});
+
+document.getElementById("next-position-btn").addEventListener("click", () => {
+  const pos = positionsData[currentPositionIndex];
+  const errorEl = document.getElementById("ballot-error");
+  if (pos && pos.required !== false && !selections[pos.id]) {
+    if (errorEl) errorEl.textContent = `Please pick a candidate for ${pos.title} before proceeding, or click 'Unpick / Clear' if you wish to skip.`;
+    return;
+  }
+  if (errorEl) errorEl.textContent = "";
+  if (currentPositionIndex < positionsData.length - 1) {
+    currentPositionIndex++;
+    renderCurrentPosition();
+  }
+});
+
+document.getElementById("clear-selection-btn").addEventListener("click", () => {
+  const pos = positionsData[currentPositionIndex];
+  if (pos) delete selections[pos.id];
+  renderCurrentPosition();
+});
 
 document.getElementById("to-review").addEventListener("click", () => {
   const errorEl = document.getElementById("ballot-error");
-  const missing = positionsData.filter((p) => !selections[p.id]);
+  const missing = positionsData.filter((p) => p.required !== false && !selections[p.id]);
   if (missing.length > 0) {
     errorEl.textContent = `Please select a candidate for: ${missing.map((p) => p.title).join(", ")}`;
     return;
   }
   errorEl.textContent = "";
+
   const reviewContainer = document.getElementById("review-container");
   reviewContainer.replaceChildren();
+
   positionsData.forEach((p) => {
     const candidate = p.candidates.find((c) => c.id === selections[p.id]);
     const row = document.createElement("div");
-    row.style.marginBottom = "12px";
-    const name = element("div", "", candidate.fullName);
-    name.style.fontWeight = "600";
-    row.append(element("div", "muted", p.title), name);
+    row.style.cssText = "padding:12px;border:1px solid var(--border);border-radius:var(--radius-md);margin-bottom:10px;background:#fafafa;";
+
+    const posLabel = element("div", "muted", p.title);
+    posLabel.style.fontSize = "12px";
+
+    const choiceVal = candidate
+      ? element("div", "", `✓ ${candidate.fullName}`)
+      : element("div", "muted", "— No candidate selected (Abstain)");
+    choiceVal.style.fontWeight = "600";
+    if (candidate) choiceVal.style.color = "var(--green-900)";
+
+    row.append(posLabel, choiceVal);
     reviewContainer.appendChild(row);
   });
+
   showStep("review");
 });
 
