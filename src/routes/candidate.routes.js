@@ -223,4 +223,35 @@ router.post("/candidates/:id/reinstate", async (req, res) => {
   res.json({ candidate });
 });
 
+router.delete("/candidates/:id", async (req, res) => {
+  const existing = await prisma.candidate.findUnique({ where: { id: req.params.id } });
+  if (!existing) return res.status(404).json({ error: "Candidate not found" });
+
+  const election = await prisma.election.findUnique({ where: { id: existing.electionId } });
+  if (["ACTIVE", "CLOSED", "RESULTS_PUBLISHED"].includes(election.status)) {
+    return res.status(409).json({ error: "Candidates cannot be deleted once voting has started or completed" });
+  }
+
+  await prisma.candidate.delete({ where: { id: req.params.id } });
+  if (existing.mediaAssetId) {
+    await prisma.mediaAsset.delete({ where: { id: existing.mediaAssetId } }).catch(() => {});
+  }
+  await logAction({ actorId: req.user.id, action: "CANDIDATE_DELETED", entity: "Candidate", entityId: req.params.id });
+  res.json({ ok: true });
+});
+
+router.delete("/positions/:id", async (req, res) => {
+  const existing = await prisma.position.findUnique({ where: { id: req.params.id } });
+  if (!existing) return res.status(404).json({ error: "Position not found" });
+
+  const election = await prisma.election.findUnique({ where: { id: existing.electionId } });
+  if (["ACTIVE", "CLOSED", "RESULTS_PUBLISHED"].includes(election.status)) {
+    return res.status(409).json({ error: "Positions cannot be deleted once voting has started or completed" });
+  }
+
+  await prisma.position.delete({ where: { id: req.params.id } });
+  await logAction({ actorId: req.user.id, action: "POSITION_DELETED", entity: "Position", entityId: req.params.id });
+  res.json({ ok: true });
+});
+
 module.exports = router;

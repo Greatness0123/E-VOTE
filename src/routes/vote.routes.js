@@ -21,7 +21,14 @@ router.get("/elections/active-for-me", requireAuth, async (req, res) => {
   const now = new Date();
   const elections = eligible.map((item) => item.election)
     .filter((election) => !votedIds.has(election.id) && election.startDate <= now && election.endDate >= now)
-    .map((election) => ({ id: election.id, title: election.title, startDate: election.startDate, endDate: election.endDate }));
+    .map((election) => ({
+      id: election.id,
+      title: election.title,
+      description: election.description,
+      academicSession: election.academicSession,
+      startDate: election.startDate,
+      endDate: election.endDate,
+    }));
   res.json({ elections });
 });
 
