@@ -34,7 +34,7 @@ router.get("/:id", async (req, res) => {
     where: { id: req.params.id },
     include: {
       positions: {
-        orderBy: [{ displayOrder: "asc" }, { createdAt: "asc" }],
+        orderBy: [{ displayOrder: "asc" }, { title: "asc" }],
         include: {
           candidates: {
             orderBy: [{ displayOrder: "asc" }, { createdAt: "asc" }],
